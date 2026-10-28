@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>T.Card — Protótipo navegável</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,500;125,700;125,800&family=Poppins:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #050506; --surface: #141416; --line: rgba(233,234,234,0.08); --text: #E9EAEA; --muted: #A3A6AC; --soft: #B7BABF;
+  --accent: #2BB3F5; --on-accent: #050506; --accent-text: #2BB3F5; --hl: #0B4F8F;
+  --glow: rgba(43,179,245,0.30); --ring: rgba(43,179,245,0.70);
+  --head: 'Archivo', 'Poppins', system-ui, sans-serif;
+  --spring: cubic-bezier(.34,1.3,.5,1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #050506; color: var(--text); font-family: 'Poppins', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font-family: inherit; }
+.grid-bg { background-image: linear-gradient(rgba(233,234,234,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(233,234,234,0.035) 1px, transparent 1px); background-size: 32px 32px; }
+.h { font-family: var(--head); font-stretch: 125%; }
+
+/* Moldura: celular no computador, tela cheia no celular */
+.wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 56px; padding: 32px; }
+.side { width: 280px; }
+.side .brand { display: flex; align-items: center; gap: 10px; }
+.side .brand img { height: 18px; }
+.side .brand span { font-family: var(--head); font-stretch: 125%; font-weight: 700; color: #2BB3F5; }
+.side h1 { margin: 18px 0 6px; font-family: var(--head); font-stretch: 125%; font-weight: 800; font-size: 26px; line-height: 1.05; letter-spacing: -0.03em; }
+.side p { margin: 0 0 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.side nav { display: grid; gap: 6px; }
+.side nav p { margin: 14px 0 2px; font-size: 10px; letter-spacing: 0.22em; color: #2BB3F5; }
+.side nav a { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; font-size: 14px; font-weight: 500; }
+.side nav a[aria-current="page"] { border-color: #2BB3F5; }
+.side nav a:hover { border-color: rgba(233,234,234,0.25); }
+.phone { position: relative; flex: none; width: 390px; height: 844px; border-radius: 46px; overflow: hidden; background: var(--bg); box-shadow: 0 0 0 10px #111114, 0 0 0 11px rgba(255,255,255,0.08), 0 50px 90px -24px rgba(0,0,0,0.9); isolation: isolate; }
+@media (max-width: 760px) {
+  .wrap { display: block; padding: 0; }
+  .side { display: none; }
+  .phone { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; box-shadow: none; }
+}
+
+.screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; background-color: var(--bg); scrollbar-width: none; }
+.screen::-webkit-scrollbar { display: none; }
+/* "backwards": ao terminar, a tela não guarda transform; assim o menu de contato fica acima da camada escura */
+.screen.enter { animation: screenIn 480ms cubic-bezier(.2,.9,.3,1) backwards; }
+@keyframes screenIn { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
+.glow-amber { position: absolute; left: -150px; top: -130px; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(240,160,70,0.16) 0%, rgba(240,160,70,0) 70%); pointer-events: none; }
+.kicker { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 500; letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent-text); }
+.kicker::before, .kicker.both::after { content: ""; width: 22px; height: 1px; background: currentColor; }
+.kicker.center { justify-content: center; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(233,234,234,0.14); background: rgba(20,20,22,0.7); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: transform 160ms ease; }
+.icon-btn:active { transform: scale(0.92); }
+.topbar { position: relative; display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 20px; z-index: 2; }
+.topbar img { height: 24px; display: block; }
+.logo-ph { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 1px dashed rgba(233,234,234,0.3); border-radius: 8px; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; color: var(--muted); text-decoration: none; }
+
+/* Cartão: topo com figurinhas */
+.hero { position: relative; height: 288px; }
+.hero .glow { position: absolute; left: 45px; top: -6px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, rgba(5,5,6,0) 68%); }
+.avatar { position: absolute; left: 107px; top: 30px; width: 176px; height: 176px; border-radius: 50%; overflow: hidden; background: linear-gradient(160deg, #23232A, #0E0E11); box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px var(--ring); animation: lift 600ms cubic-bezier(.2,.9,.3,1) both; }
+.avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+@keyframes lift { from { transform: translateY(14px) scale(0.94); opacity: 0; } }
+.chip { position: absolute; transition: transform 460ms cubic-bezier(.34,1.45,.5,1), opacity 240ms ease; }
+.chip span { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 0 0 3px #FFFFFF, 0 10px 24px -8px rgba(0,0,0,0.7); }
+.chip.a { left: 20px; top: 44px; transform: rotate(-7deg); }
+.chip.a span { background: #F4F5F7; color: #121214; }
+.chip.c { left: 30px; top: 196px; transform: rotate(5deg); transition-delay: 60ms; }
+.chip.c span { background: var(--hl); color: #FFFFFF; }
+.main-st { position: absolute; transform: rotate(-4deg); transition: transform 520ms cubic-bezier(.34,1.45,.5,1), opacity 240ms ease; filter: drop-shadow(0 14px 18px rgba(0,0,0,0.6)); }
+.main-st img { width: 100%; height: 100%; display: block; }
+.main-st.car { left: 198px; top: 168px; width: 176px; height: 88px; }
+.main-st.sq { left: 244px; top: 148px; width: 116px; height: 116px; }
+.hero.out .chip.a { transform: rotate(-24deg) scale(0.4); opacity: 0; }
+.hero.out .chip.c { transform: rotate(20deg) scale(0.4); opacity: 0; }
+.hero.out .main-st { transform: rotate(12deg) scale(0.45) translateX(24px); opacity: 0; }
+
+.ident { padding: 0 20px; text-align: center; }
+.ident h1 { margin: 10px 0 0; font-weight: 800; font-size: 46px; line-height: 1; letter-spacing: -0.035em; color: #F4F5F6; }
+.ident .line { margin: 12px 0 0; font-size: 17px; line-height: 1.5; color: #C4C7CC; }
+.word-box { display: inline-block; overflow: hidden; vertical-align: bottom; margin: 0 4px; padding: 1px 9px; border-radius: 6px; background: var(--hl); color: #FFFFFF; font-weight: 600; transition: width 300ms ease; }
+.word-box span { display: inline-block; transition: transform 380ms cubic-bezier(.2,.9,.3,1), opacity 220ms ease; }
+.hero-out-word .word-box span { transform: translateY(-110%); opacity: 0; }
+
+/* Botão que vira menu */
+.cta-row { display: flex; gap: 12px; align-items: flex-end; padding: 26px 20px 0; }
+.morph-slot { position: relative; flex: 1; height: 56px; }
+.morph { position: absolute; left: 0; bottom: 0; z-index: 30; width: 100%; height: 56px; border-radius: 28px; background: var(--accent); border: 1px solid transparent; overflow: hidden; box-shadow: 0 14px 30px -16px var(--accent); transition: width 460ms var(--spring), height 460ms var(--spring), background 260ms ease, box-shadow 300ms ease, transform 160ms ease; }
+.morph:has(.trigger:active) { transform: scale(0.96); }
+.morph .trigger { position: absolute; left: 0; bottom: 0; width: 100%; height: 56px; border: 0; background: transparent; color: var(--on-accent); display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 180ms ease; }
+.morph .panel { position: absolute; left: 0; top: 0; width: 350px; padding: 18px 16px 16px; opacity: 0; pointer-events: none; transition: opacity 200ms ease; }
+.morph.open { width: 350px; height: 326px; background: var(--surface); border-color: rgba(233,234,234,0.10); box-shadow: 0 30px 60px -16px rgba(0,0,0,0.85); }
+.morph.open .trigger { opacity: 0; pointer-events: none; }
+.morph.open .panel { opacity: 1; pointer-events: auto; transition-delay: 120ms; }
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 0 4px 10px; }
+.panel-head p { margin: 0; }
+.panel-head .t { font-weight: 700; font-size: 18px; color: #F4F5F6; }
+.panel-head .s { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.close { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(233,234,234,0.08); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.mi { display: flex; align-items: center; gap: 14px; min-height: 58px; padding: 0 6px; border-radius: 16px; text-decoration: none; color: var(--text); opacity: 0; transform: translateY(12px); transition: opacity 260ms ease, transform 360ms cubic-bezier(.2,.9,.3,1.2), background 160ms ease; }
+.mi:active { background: rgba(233,234,234,0.05); }
+.morph.open .mi { opacity: 1; transform: none; }
+.morph.open .mi:nth-of-type(1) { transition-delay: 150ms; }
+.morph.open .mi:nth-of-type(2) { transition-delay: 205ms; }
+.morph.open .mi:nth-of-type(3) { transition-delay: 260ms; }
+.morph.open .mi:nth-of-type(4) { transition-delay: 315ms; }
+.mi .ic { width: 42px; height: 42px; border-radius: 14px; background: rgba(233,234,234,0.08); display: grid; place-items: center; flex: none; }
+.mi .ic.acc { background: var(--accent); color: var(--on-accent); }
+.mi .tx { flex: 1; display: grid; }
+.mi strong { font-size: 15px; font-weight: 600; }
+.mi small { font-size: 13px; color: var(--muted); }
+.save { flex: none; width: 112px; height: 56px; border-radius: 28px; border: 1px solid rgba(233,234,234,0.18); background: rgba(20,20,22,0.8); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 15px; font-weight: 600; transition: transform 160ms ease; }
+.save:active { transform: scale(0.95); }
+.scrim { position: absolute; inset: 0; z-index: 20; border: 0; padding: 0; background: rgba(5,5,6,0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+
+/* Abas táteis */
+.tabs-wrap { padding: 24px 20px 0; }
+.tabs { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 52px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid rgba(233,234,234,0.06); }
+.tabs .ind { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 999px; background: #E9EAEA; transition: transform 420ms var(--spring); }
+.tabs button { position: relative; border: 0; background: transparent; font-size: 14px; font-weight: 600; color: var(--soft); cursor: pointer; transition: transform 160ms ease, color 240ms ease; }
+.tabs button[aria-selected="true"] { color: #050506; }
+.tabs button:active { transform: scale(0.92); }
+.tabpanel { animation: fadeIn 320ms ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } }
+
+/* Widgets deslizáveis */
+.strip { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 16px 20px 4px; scroll-padding: 0 20px; scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+.wd { position: relative; flex: none; height: 176px; scroll-snap-align: start; border-radius: 24px; padding: 18px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--text); overflow: hidden; display: flex; flex-direction: column; transition: transform 200ms ease; }
+.wd:active { transform: scale(0.97); }
+.wd.wide { width: 296px; }
+.wd.sq { width: 176px; }
+.wd.brand { background: var(--hl); border-color: transparent; color: #FFFFFF; }
+.wd .k { font-size: 10px; font-weight: 500; letter-spacing: 0.22em; color: var(--accent-text); }
+.wd.brand .k { color: rgba(255,255,255,0.8); }
+.wd strong { font-family: var(--head); font-stretch: 125%; font-weight: 700; font-size: 18px; line-height: 1.15; }
+.wd .ttl { margin-top: 8px; max-width: 170px; }
+.wd .bottom { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.wd.brand .bottom { color: rgba(255,255,255,0.85); }
+.wd .pic { position: absolute; right: -36px; bottom: 18px; width: 170px; height: auto; filter: drop-shadow(0 12px 14px rgba(0,0,0,0.6)); }
+.wd .pic.sqpic { right: 10px; bottom: 14px; width: 104px; }
+.wd .stars { display: flex; gap: 2px; color: #F4B400; }
+.wd .sq-ic { width: 40px; height: 40px; border-radius: 12px; background: rgba(233,234,234,0.08); display: grid; place-items: center; }
+.wd .sq-ic.acc { background: var(--accent); color: var(--on-accent); }
+.wd .sub { margin-top: 4px; font-size: 13px; color: var(--muted); }
+.wd.sq strong { margin-top: auto; font-size: 17px; }
+.dots { display: flex; justify-content: center; gap: 6px; padding-top: 12px; }
+.dots span { height: 6px; width: 6px; border-radius: 3px; background: rgba(233,234,234,0.25); transition: width 300ms ease, background 300ms ease; }
+.dots span.on { width: 18px; background: #E9EAEA; }
+
+.list { margin: 16px 20px 0; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.row { display: flex; align-items: center; gap: 14px; min-height: 66px; padding: 0 16px; text-decoration: none; color: var(--text); transition: background 160ms ease; }
+.row + .row { border-top: 1px solid rgba(233,234,234,0.07); }
+a.row:active { background: rgba(233,234,234,0.05); }
+.row .tx { flex: 1; display: grid; }
+.row strong { font-size: 15px; font-weight: 600; }
+.row small { font-size: 13px; color: var(--muted); }
+.map-card { margin: 16px 20px 0; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.map-card > svg { display: block; width: 100%; height: auto; }
+.map-card .in { padding: 16px; }
+.map-card .k { margin: 0; font-size: 10px; font-weight: 500; letter-spacing: 0.22em; color: var(--accent-text); }
+.map-card .addr { margin: 6px 0 0; font-size: 15px; line-height: 1.45; }
+.route-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.route-btns a { height: 52px; border-radius: 16px; border: 1px solid rgba(233,234,234,0.16); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; transition: transform 160ms ease; }
+.route-btns a:active { transform: scale(0.96); }
+
+.foot { padding: 36px 20px 120px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.foot .sig { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8C9096; }
+.foot .sig img { height: 13px; opacity: 0.85; }
+.foot button { border: 0; background: transparent; font-size: 12px; color: #8C9096; text-decoration: underline; cursor: pointer; min-height: 44px; }
+
+.consent { position: absolute; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 15; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 20px; background: rgba(20,20,22,0.94); border: 1px solid rgba(233,234,234,0.10); box-shadow: 0 18px 40px -16px rgba(0,0,0,0.9); animation: rise 420ms cubic-bezier(.2,.9,.3,1) 600ms both; }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+.consent p { margin: 0; flex: 1; font-size: 12px; line-height: 1.4; color: var(--soft); }
+.consent button { height: 44px; padding: 0 12px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.consent .no { border: 1px solid rgba(233,234,234,0.18); background: transparent; color: var(--text); }
+.consent .yes { border: 0; background: #E9EAEA; color: #050506; }
+
+/* Formulário de contato */
+.sheet-back { position: absolute; inset: 0; z-index: 40; background: rgba(5,5,6,0.6); opacity: 0; pointer-events: none; transition: opacity 260ms ease; }
+.sheet-back.on { opacity: 1; pointer-events: auto; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 41; padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); border-radius: 28px 28px 0 0; background: var(--surface); border-top: 1px solid rgba(233,234,234,0.1); transform: translateY(105%); transition: transform 420ms cubic-bezier(.2,.9,.3,1); }
+.sheet.on { transform: none; }
+.sheet h2 { margin: 0 44px 0 0; font-weight: 800; font-size: 24px; line-height: 1.1; letter-spacing: -0.03em; }
+.sheet .sub { margin: 6px 0 16px; font-size: 14px; color: var(--muted); }
+.sheet label { display: grid; gap: 6px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+.sheet input { height: 50px; padding: 0 14px; border-radius: 14px; border: 1px solid rgba(233,234,234,0.16); background: #0B0B0D; color: var(--text); font: 400 16px 'Poppins', sans-serif; }
+.sheet input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sheet .send { width: 100%; height: 56px; margin-top: 6px; border: 0; border-radius: 28px; background: var(--accent); color: var(--on-accent); font-size: 16px; font-weight: 600; cursor: pointer; }
+.sheet .close { position: absolute; right: 16px; top: 16px; }
+.sheet .done { text-align: center; padding: 16px 0 8px; }
+.sheet .done .ok { width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; animation: lift 420ms var(--spring) both; }
+
+/* Envelope NFC */
+.env-screen { overflow: hidden; }
+.env-top { position: absolute; left: 20px; right: 20px; top: 14px; display: flex; align-items: center; justify-content: space-between; z-index: 5; }
+.skip { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(233,234,234,0.16); background: rgba(20,20,22,0.7); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 240ms ease; }
+.stage { position: absolute; left: 50%; top: 330px; width: 300px; height: 190px; margin-left: -150px; perspective: 900px; transform: rotate(-6deg) translateY(12px) scale(0.96); transition: transform 600ms cubic-bezier(.2,.9,.3,1); }
+.env-back, .pocket, .flap { transition: opacity 360ms ease, transform 520ms cubic-bezier(.4,0,.6,1); }
+.env-back { position: absolute; inset: 0; border-radius: 14px; background: #0D0D10; border: 1px solid rgba(233,234,234,0.07); }
+.pocket { position: absolute; left: 0; bottom: 0; width: 300px; height: 150px; z-index: 3; }
+.pocket svg { display: block; }
+.pocket img { position: absolute; left: 118px; top: 112px; height: 20px; opacity: 0.28; }
+.flap { position: absolute; left: 0; top: 0; width: 300px; height: 112px; z-index: 4; transform-origin: 50% 0; transition: transform 520ms cubic-bezier(.45,.05,.3,1), opacity 360ms ease; }
+.flap svg { display: block; }
+.phys { position: absolute; left: 30px; top: 10px; width: 240px; height: 152px; z-index: 2; transition: transform 640ms cubic-bezier(.22,1.15,.36,1); }
+.phys-face { position: relative; width: 240px; height: 152px; border-radius: 14px; padding: 14px; overflow: hidden; background: linear-gradient(135deg, #1A1A20 0%, #09090B 100%); border: 1px solid rgba(233,234,234,0.14); box-shadow: 0 24px 50px -18px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08); display: flex; flex-direction: column; }
+.phys-face .g { position: absolute; right: -60px; top: -70px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, rgba(0,0,0,0) 70%); }
+.phys-face .gr { position: absolute; inset: 0; background-image: linear-gradient(rgba(233,234,234,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(233,234,234,0.04) 1px, transparent 1px); background-size: 16px 16px; }
+.phys-face .r1, .phys-face .r2 { position: relative; display: flex; justify-content: space-between; }
+.phys-face .r1 { align-items: center; }
+.phys-face .r2 { margin-top: auto; align-items: flex-end; }
+.phys-face .logo-ph { height: 20px; padding: 0 8px; font-size: 7px; border-radius: 5px; }
+.phys-face .slogo { height: 16px; }
+.phys-face .nm { margin: 0; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: #F4F5F6; text-transform: uppercase; }
+.phys-face .rl { margin: 2px 0 0; font-size: 9px; letter-spacing: 0.08em; color: var(--muted); }
+.phys-face .tc { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.phys-face .tc span { font-weight: 700; font-size: 10px; color: #2BB3F5; }
+.phys-face .tc img { height: 8px; opacity: 0.7; }
+.env-cap { position: absolute; left: 24px; right: 24px; top: 520px; text-align: center; opacity: 0; transform: translateY(-96px); pointer-events: none; transition: opacity 400ms ease 120ms, transform 520ms cubic-bezier(.2,.9,.3,1) 120ms; }
+.env-cap h1 { margin: 0; font-weight: 800; font-size: 32px; line-height: 1.05; letter-spacing: -0.03em; color: #F4F5F6; }
+.env-cap p { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: var(--soft); }
+.env-cap .go { margin-top: 22px; height: 56px; border-radius: 28px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; font-size: 16px; font-weight: 600; transition: transform 160ms ease; }
+.env-cap .go:active { transform: scale(0.96); }
+.env-cap .again { margin-top: 10px; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 13px; text-decoration: underline; cursor: pointer; }
+.env-screen[data-step="1"] .stage, .env-screen[data-step="2"] .stage, .env-screen[data-step="3"] .stage { transform: none; }
+.env-screen[data-step="1"] .flap, .env-screen[data-step="2"] .flap, .env-screen[data-step="3"] .flap { transform: rotateX(180deg); z-index: 1; }
+.env-screen[data-step="2"] .phys { transform: translateY(-118px) rotate(-3deg); }
+.env-screen[data-step="3"] .phys { transform: translateY(-250px) scale(1.25); }
+.env-screen[data-step="3"] .env-back, .env-screen[data-step="3"] .pocket, .env-screen[data-step="3"] .flap { opacity: 0; }
+.env-screen[data-step="3"] .env-back, .env-screen[data-step="3"] .pocket { transform: translateY(90px); }
+.env-screen[data-step="3"] .env-cap { opacity: 1; transform: translateY(-120px); pointer-events: auto; }
+.env-screen[data-step="3"] .skip { opacity: 0; pointer-events: none; }
+
+/* Página da loja */
+.store-head { position: relative; padding: 8px 20px 0; }
+.store-head h1 { margin: 10px 0 0; font-weight: 800; font-size: 34px; line-height: 1.02; letter-spacing: -0.035em; color: #F4F5F6; }
+.store-head .addr { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.sec-title { margin: 0; padding: 0 20px; font-size: 16px; font-weight: 600; }
+.carousel { position: relative; height: 290px; margin-top: 14px; perspective: 1000px; touch-action: pan-y; }
+.carousel .glow { position: absolute; left: 20px; top: -30px; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, rgba(5,5,6,0) 68%); pointer-events: none; }
+.sc { position: absolute; left: 50%; top: 6px; width: 196px; height: 270px; margin-left: -98px; padding: 14px; border-radius: 26px; border: 0; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; transition: transform 560ms cubic-bezier(.22,1.2,.36,1), opacity 420ms ease, box-shadow 300ms ease; }
+.sc img { display: block; width: 168px; height: 168px; border-radius: 18px; background: linear-gradient(160deg, #2A2A31, #111114); pointer-events: none; }
+.sc .n { display: block; margin-top: 14px; font-family: var(--head); font-stretch: 125%; font-weight: 700; font-size: 18px; }
+.sc .r { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.car-ctrl { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 0; }
+.car-ctrl .icon-btn[disabled] { opacity: 0.35; }
+.open-card { margin: 16px 20px 0; height: 56px; border-radius: 28px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; font-size: 16px; font-weight: 600; box-shadow: 0 14px 30px -16px var(--accent); transition: transform 160ms ease; }
+.open-card:active { transform: scale(0.96); }
+.wd .map-bg { position: absolute; inset: 0; }
+.wd .map-label { position: absolute; left: 16px; bottom: 16px; display: grid; padding: 10px 12px; border-radius: 14px; background: rgba(5,5,6,0.82); }
+.wd .map-label strong { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; font-stretch: normal; }
+.wd .map-label small { font-size: 12px; color: var(--soft); }
+
+.toast { position: absolute; left: 50%; top: 16px; z-index: 60; transform: translate(-50%, -80px); padding: 10px 16px; border-radius: 999px; background: #E9EAEA; color: #050506; font-size: 13px; font-weight: 600; white-space: nowrap; transition: transform 380ms var(--spring); }
+.toast.on { transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; transition-delay: 0ms !important; }
+}
+</style>
+</head>
+<body class="grid-bg">
+<div class="wrap">
+  <aside class="side">
+    <div class="brand"><img src="assets/thoth-logo.png" alt="THOTH"><span>T.Card</span></div>
+    <h1>Protótipo do cartão e da página da loja</h1>
+    <p>Navegue pelos links abaixo ou toque nos botões dentro do celular. No celular, o protótipo ocupa a tela inteira.</p>
+    <nav id="side-nav" aria-label="Telas do protótipo">
+      <p>CHEGADA PELA TAG NFC</p>
+      <a href="#nfc/marcus">Envelope — Marcus</a>
+      <a href="#nfc/cidney">Envelope — Cidney</a>
+      <p>CARTÃO DO VENDEDOR</p>
+      <a href="#c/marcus">Marcus · concessionária VW</a>
+      <a href="#c/cidney">Cidney · Demo Motors</a>
+      <a href="#c/juliana">Juliana · Demo Motors</a>
+      <p>PÁGINA DA LOJA</p>
+      <a href="#loja/demo">Demo Motors Barra</a>
+    </nav>
+  </aside>
+  <div class="phone" id="phone"></div>
+</div>
+
+<script>
+const IMG = {
+  thoth: 'assets/thoth-logo.png', demo: 'assets/demo-logo.png',
+  marcus: 'assets/marcus.svg', cidney: 'assets/cidney.svg', juliana: 'assets/juliana.svg', rafael: 'assets/rafael.svg', patricia: 'assets/patricia.svg',
+  suv: 'assets/car-suv.svg', hatch: 'assets/car-hatch.svg', coupe: 'assets/car-coupe.svg',
+  key: 'assets/st-key.svg', wheel: 'assets/st-wheel.svg', tag: 'assets/st-tag.svg'
+};
+const CARS = ['suv', 'hatch', 'coupe'];
+
+const STORES = {
+  vw: {
+    name: 'Concessionária VW', short: 'Concessionária VW', logo: null, area: 'Barra da Tijuca',
+    address: 'Av. das Américas, 5000 · Barra da Tijuca, Rio de Janeiro', phone: '(21) 3333-0000', insta: 'Instagram da concessionária',
+    theme: { accent: '#2BB3F5', onAccent: '#050506', accentText: '#2BB3F5', hl: '#0B4F8F', glow: 'rgba(43,179,245,0.30)', ring: 'rgba(43,179,245,0.70)' },
+    w1: 'Ver modelos 0 km e seminovos', w1img: 'hatch', w4: 'Agendar test drive', w4img: 'suv', team: null
+  },
+  demo: {
+    name: 'Demo Motors Barra', short: 'Demo Motors', logo: 'demo', area: 'Barra da Tijuca',
+    address: 'Av. das Américas, 5000 · Barra da Tijuca, Rio de Janeiro', phone: '(21) 3333-0000', insta: '@demomotors',
+    theme: { accent: '#D61F38', onAccent: '#FFFFFF', accentText: '#FF7A8A', hl: '#7A0A1B', glow: 'rgba(214,31,56,0.28)', ring: 'rgba(255,122,138,0.70)' },
+    w1: 'Ver estoque de seminovos', w1img: 'hatch', w4: 'Simular financiamento', w4img: 'tag', team: ['cidney', 'juliana', 'rafael', 'patricia']
+  }
+};
+
+const SELLERS = {
+  marcus: { store: 'vw', name: 'Marcus', role: 'Consultor de vendas', photo: 'marcus', phone: '(21) 98888-0000',
+    kicker: 'Consultor · Concessionária VW', pre: 'Seu próximo', post: 'está aqui',
+    words: ['T-Cross', 'Polo', 'Nivus'], chipA: ['Test drive', 'Avalie seu usado', 'Financiamento'], chipC: ['SUV', 'Hatch', 'SUV coupé'], mains: ['suv', 'hatch', 'coupe'] },
+  cidney: { store: 'demo', name: 'Cidney', role: 'Consultor de seminovos', photo: 'cidney', phone: '(21) 98888-0001',
+    kicker: 'Seminovos · Demo Motors', pre: 'Fale comigo sobre', post: '',
+    words: ['seminovos', 'test drive', 'financiamento'], chipA: ['Seminovos', 'Test drive', 'Financiamento'], chipC: ['Avalie seu usado', 'Agende sua visita', 'Simule a parcela'], mains: ['key', 'wheel', 'tag'] },
+  juliana: { store: 'demo', name: 'Juliana', role: 'Consultora de seminovos', photo: 'juliana', phone: '(21) 98888-0002',
+    kicker: 'Seminovos · Demo Motors', pre: 'Fale comigo sobre', post: '',
+    words: ['seminovos', 'seu usado', 'test drive'], chipA: ['Seminovos', 'Avalie seu usado', 'Test drive'], chipC: ['Hatch', 'SUV', 'Agende sua visita'], mains: ['hatch', 'suv', 'wheel'] },
+  rafael: { store: 'demo', name: 'Rafael', role: 'Gerente de vendas', photo: 'rafael', phone: '(21) 98888-0003',
+    kicker: 'Gerência · Demo Motors', pre: 'Fale comigo sobre', post: '',
+    words: ['condições', 'financiamento', 'seminovos'], chipA: ['Condições', 'Financiamento', 'Seminovos'], chipC: ['Simule a parcela', 'Avalie seu usado', 'Agende sua visita'], mains: ['tag', 'key', 'coupe'] },
+  patricia: { store: 'demo', name: 'Patrícia', role: 'Consultora de vendas', photo: 'patricia', phone: '(21) 98888-0004',
+    kicker: 'Vendas · Demo Motors', pre: 'Fale comigo sobre', post: '',
+    words: ['seminovos', 'test drive', 'seu usado'], chipA: ['Seminovos', 'Test drive', 'Avalie seu usado'], chipC: ['SUV coupé', 'Agende sua visita', 'Troca'], mains: ['coupe', 'wheel', 'key'] }
+};
+
+const ICON = {
+  share: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  next: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.1L4 20z"/></svg>',
+  phone: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
+  mail: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 19a8 8 0 0 1 16 0"/><circle cx="12" cy="8" r="4"/></svg>',
+  save: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>',
+  close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  out: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>',
+  arrow: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>',
+  chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A6AC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  clock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  team: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5.5 5"/></svg>',
+  insta: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>',
+  waze: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>',
+  pin: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+  nfc: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E9EAEA" stroke-width="1.8" stroke-linecap="round" role="img" aria-label="NFC"><path d="M8 8.5a5 5 0 0 1 0 7"/><path d="M11.5 6a9 9 0 0 1 0 12"/><path d="M15 3.5a13 13 0 0 1 0 17"/></svg>',
+  check: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  star: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>'
+};
+
+const phone = document.getElementById('phone');
+let timers = [];
+let consentDone = false;
+const clearTimers = () => { timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = []; };
+
+function applyTheme(t) {
+  const r = phone.style;
+  r.setProperty('--accent', t.accent); r.setProperty('--on-accent', t.onAccent); r.setProperty('--accent-text', t.accentText);
+  r.setProperty('--hl', t.hl); r.setProperty('--glow', t.glow); r.setProperty('--ring', t.ring);
+}
+const storeLogo = (st, small) => st.logo
+  ? `<img class="${small ? 'slogo' : ''}" src="${IMG[st.logo]}" alt="${st.name}">`
+  : `<span class="logo-ph">LOGO DA LOJA</span>`;
+const mainClass = (k) => (CARS.includes(k) ? 'car' : 'sq');
+const sig = () => `<div class="sig"><span>Cartão digital T.Card por</span><img src="${IMG.thoth}" alt="THOTH"></div>`;
+
+function toast(msg) {
+  let t = phone.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); phone.appendChild(t); }
+  t.textContent = msg;
+  requestAnimationFrame(() => t.classList.add('on'));
+  timers.push(setTimeout(() => t.classList.remove('on'), 2200));
+}
+
+function consentHTML() {
+  if (consentDone) return '';
+  return `<div class="consent" role="dialog" aria-label="Privacidade"><p>Usamos cookies para mostrar ofertas desta loja nas suas redes.</p><button type="button" class="no" data-consent>Recusar</button><button type="button" class="yes" data-consent>Aceitar</button></div>`;
+}
+function wireConsent() {
+  phone.querySelectorAll('[data-consent]').forEach((b) => b.addEventListener('click', () => {
+    consentDone = true; const c = phone.querySelector('.consent');
+    c.style.transition = 'opacity 220ms ease, transform 220ms ease'; c.style.opacity = '0'; c.style.transform = 'translateY(20px)';
+    setTimeout(() => c.remove(), 230);
+  }));
+}
+
+/* ---------- Envelope NFC ---------- */
+function renderEnvelope(id) {
+  const s = SELLERS[id] || SELLERS.marcus; const st = STORES[s.store];
+  applyTheme(st.theme);
+  phone.innerHTML = `
+  <section class="screen env-screen grid-bg enter" data-step="0" aria-label="Chegada pelo cartão NFC">
+    <div class="glow-amber"></div>
+    <div style="position:absolute;right:-170px;bottom:-150px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle, var(--glow) 0%, rgba(0,0,0,0) 70%)"></div>
+    <div class="env-top"><p class="kicker">Via cartão NFC</p><button type="button" class="skip" data-skip>Pular</button></div>
+    <div class="stage">
+      <div class="env-back"></div>
+      <div class="phys"><div class="phys-face"><div class="g"></div><div class="gr"></div>
+        <div class="r1">${storeLogo(st, true)}${ICON.nfc}</div>
+        <div class="r2"><div><p class="nm h">${s.name}</p><p class="rl">${s.role}</p></div><div class="tc"><span class="h">T.Card</span><img src="${IMG.thoth}" alt="THOTH"></div></div>
+      </div></div>
+      <div class="pocket"><svg width="300" height="150" viewBox="0 0 300 150" aria-hidden="true"><path d="M0 22 L150 92 L300 22 L300 136 Q300 150 286 150 L14 150 Q0 150 0 136 Z" fill="#131317"/><path d="M0 22 L150 92 L300 22" fill="none" stroke="rgba(233,234,234,0.10)"/></svg><img src="${IMG.thoth}" alt=""></div>
+      <div class="flap"><svg width="300" height="112" viewBox="0 0 300 112" aria-hidden="true"><path d="M14 0 L286 0 Q300 0 300 14 L300 16 L158 104 Q150 109 142 104 L0 16 L0 14 Q0 0 14 0 Z" fill="#1A1A1F"/><path d="M0 16 L142 104 Q150 109 158 104 L300 16" fill="none" stroke="rgba(233,234,234,0.12)"/><circle cx="150" cy="92" r="11" fill="#2BB3F5"/><circle cx="150" cy="92" r="4" fill="#050506"/></svg></div>
+    </div>
+    <div class="env-cap">
+      <h1 class="h">Olá, eu sou ${s.name === 'Juliana' || s.name === 'Patrícia' ? 'a' : 'o'} ${s.name}</h1>
+      <p>Salve meu contato ou me chame no WhatsApp. Estou aqui na loja.</p>
+      <a class="go" href="#c/${id}">Abrir meu cartão ${ICON.arrow}</a>
+      <button type="button" class="again" data-again>Ver a abertura de novo</button>
+    </div>
+  </section>`;
+  const scr = phone.querySelector('.env-screen');
+  const play = () => {
+    clearTimers(); scr.dataset.step = '0';
+    [[750, 1], [1150, 2], [1600, 3]].forEach(([ms, step]) => timers.push(setTimeout(() => { scr.dataset.step = String(step); }, ms)));
+  };
+  scr.querySelector('[data-skip]').addEventListener('click', () => { clearTimers(); scr.dataset.step = '3'; });
+  scr.querySelector('[data-again]').addEventListener('click', play);
+  play();
+}
+
+/* ---------- Cartão do vendedor ---------- */
+function renderCard(id, startTab) {
+  const s = SELLERS[id] || SELLERS.marcus; const st = STORES[s.store];
+  applyTheme(st.theme);
+  const isFem = s.name === 'Juliana' || s.name === 'Patrícia';
+  const logo = st.team ? `<a href="#loja/${s.store}" aria-label="Ver a página da ${st.name}">${storeLogo(st)}</a>` : storeLogo(st);
+  phone.innerHTML = `
+  <section class="screen grid-bg enter" aria-label="Cartão de ${s.name}">
+    <div class="glow-amber"></div>
+    <header class="topbar">${logo}<button type="button" class="icon-btn" aria-label="Compartilhar cartão" data-share>${ICON.share}</button></header>
+    <div class="hero" data-hero>
+      <div class="glow"></div>
+      <div class="avatar"><img src="${IMG[s.photo]}" alt="Foto de ${s.name}"></div>
+      <div class="chip a"><span data-chipa>${s.chipA[0]}</span></div>
+      <div class="main-st ${mainClass(s.mains[0])}" data-main><img src="${IMG[s.mains[0]]}" alt=""></div>
+      <div class="chip c"><span data-chipc>${s.chipC[0]}</span></div>
+    </div>
+    <div class="ident" data-ident>
+      <p class="kicker both center">${s.kicker}</p>
+      <h1 class="h">${s.name}</h1>
+      <p class="line">${s.pre} <span class="word-box"><span data-word>${s.words[0]}</span></span> ${s.post}</p>
+    </div>
+    <div class="cta-row">
+      <div class="morph-slot">
+        <div class="morph" data-morph>
+          <button type="button" class="trigger" data-open aria-expanded="false">${ICON.chat} Falar com ${s.name}</button>
+          <div class="panel">
+            <div class="panel-head"><div><p class="t h">Falar com ${s.name}</p><p class="s">Escolha como prefere</p></div><button type="button" class="close" data-close aria-label="Fechar opções de contato">${ICON.close}</button></div>
+            <a class="mi" href="#" data-demo="Abriria o WhatsApp com a mensagem pronta"><span class="ic acc">${ICON.chat}</span><span class="tx"><strong>WhatsApp</strong><small>Mensagem pronta para ${s.name}</small></span></a>
+            <a class="mi" href="#" data-demo="Abriria a ligação para ${s.phone}"><span class="ic">${ICON.phone}</span><span class="tx"><strong>Ligar</strong><small>${s.phone}</small></span></a>
+            <a class="mi" href="#" data-demo="Abriria o app de e-mail"><span class="ic">${ICON.mail}</span><span class="tx"><strong>E-mail</strong><small>Escrever para ${s.name}</small></span></a>
+            <a class="mi" href="#" data-lead><span class="ic">${ICON.user}</span><span class="tx"><strong>Quero que ${s.name} me chame</strong><small>Deixe nome e celular</small></span></a>
+          </div>
+        </div>
+      </div>
+      <a class="save" href="#" data-demo="Baixaria o contato de ${s.name} para a agenda">${ICON.save} Salvar</a>
+    </div>
+    <div class="tabs-wrap">
+      <div class="tabs" role="tablist" aria-label="Seções do cartão">
+        <span class="ind" aria-hidden="true"></span>
+        <button type="button" role="tab" data-tab="0">Destaques</button>
+        <button type="button" role="tab" data-tab="1">Loja</button>
+        <button type="button" role="tab" data-tab="2">Como chegar</button>
+      </div>
+    </div>
+    <div data-panel></div>
+    <footer class="foot">${sig()}<button type="button" data-prefs>Preferências de privacidade</button></footer>
+  </section>
+  <button type="button" class="scrim" data-scrim aria-label="Fechar opções de contato" tabindex="-1"></button>
+  ${consentHTML()}
+  <div class="sheet-back" data-sheetback></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="lead-t" data-sheet>
+    <button type="button" class="close" data-sheetclose aria-label="Fechar">${ICON.close}</button>
+    <form data-form>
+      <h2 class="h" id="lead-t">Deixe seu contato com ${s.name}</h2>
+      <p class="sub">${s.name} recebe seus dados e chama você no WhatsApp.</p>
+      <label>Nome<input name="nome" autocomplete="name" required></label>
+      <label>Celular com DDD<input name="cel" type="tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-0000" required></label>
+      <button type="submit" class="send">Enviar meu contato</button>
+    </form>
+    <div class="done" data-done hidden><div class="ok">${ICON.check}</div><h2 class="h" style="margin:0">Contato enviado</h2><p class="sub">${s.name} vai chamar você em breve.</p></div>
+  </div>`;
+
+  const scr = phone.querySelector('.screen');
+  const hero = scr.querySelector('[data-hero]');
+  const ident = scr.querySelector('[data-ident]');
+  let i = 0;
+  timers.push(setInterval(() => {
+    hero.classList.add('out'); ident.classList.add('hero-out-word');
+    timers.push(setTimeout(() => {
+      i = (i + 1) % 3;
+      scr.querySelector('[data-chipa]').textContent = s.chipA[i];
+      scr.querySelector('[data-chipc]').textContent = s.chipC[i];
+      scr.querySelector('[data-word]').textContent = s.words[i];
+      const m = scr.querySelector('[data-main]');
+      m.className = 'main-st ' + mainClass(s.mains[i]); m.querySelector('img').src = IMG[s.mains[i]];
+      hero.classList.remove('out'); ident.classList.remove('hero-out-word');
+    }, 280));
+  }, 2800));
+
+  const morph = scr.querySelector('[data-morph]');
+  const scrim = phone.querySelector('[data-scrim]');
+  const trig = scr.querySelector('[data-open]');
+  const setMenu = (on) => { morph.classList.toggle('open', on); scrim.classList.toggle('on', on); trig.setAttribute('aria-expanded', String(on)); };
+  trig.addEventListener('click', () => setMenu(true));
+  scr.querySelector('[data-close]').addEventListener('click', () => setMenu(false));
+  scrim.addEventListener('click', () => setMenu(false));
+
+  phone.querySelectorAll('[data-demo]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); toast(a.dataset.demo); }));
+  scr.querySelector('[data-share]').addEventListener('click', () => toast('Abriria o menu de compartilhar do celular'));
+  scr.querySelector('[data-prefs]').addEventListener('click', () => { consentDone = false; if (!phone.querySelector('.consent')) { phone.insertAdjacentHTML('beforeend', consentHTML()); wireConsent(); } });
+
+  const back = phone.querySelector('[data-sheetback]'); const sheet = phone.querySelector('[data-sheet]');
+  const setSheet = (on) => { back.classList.toggle('on', on); sheet.classList.toggle('on', on); if (on) { setMenu(false); sheet.querySelector('[data-form]').hidden = false; sheet.querySelector('[data-done]').hidden = true; } };
+  phone.querySelector('[data-lead]').addEventListener('click', (e) => { e.preventDefault(); setSheet(true); });
+  back.addEventListener('click', () => setSheet(false));
+  sheet.querySelector('[data-sheetclose]').addEventListener('click', () => setSheet(false));
+  sheet.querySelector('[data-form]').addEventListener('submit', (e) => { e.preventDefault(); e.target.hidden = true; sheet.querySelector('[data-done]').hidden = false; timers.push(setTimeout(() => setSheet(false), 1800)); });
+
+  const panel = scr.querySelector('[data-panel]');
+  const ind = scr.querySelector('.ind');
+  const tabs = scr.querySelectorAll('[data-tab]');
+  const showTab = (n) => {
+    ind.style.transform = `translateX(${n * 100}%)`;
+    tabs.forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.tab === n)));
+    panel.innerHTML = tabHTML(n, s, st, id);
+    panel.firstElementChild.classList.add('tabpanel');
+    wirePanel(panel);
+  };
+  tabs.forEach((b) => b.addEventListener('click', () => showTab(+b.dataset.tab)));
+  showTab(startTab || 0);
+  wireConsent();
+}
+
+function tabHTML(n, s, st, id) {
+  if (n === 0) {
+    const pic4 = CARS.includes(st.w4img) ? `<img class="pic" src="${IMG[st.w4img]}" alt="">` : `<img class="pic sqpic" src="${IMG[st.w4img]}" alt="">`;
+    return `<section aria-label="Destaques"><div class="strip" data-strip>
+      <a class="wd wide" href="#" data-demo="Abriria o site da loja"><span class="k">ESTOQUE</span><strong class="ttl">${st.w1}</strong><span class="bottom">Abrir site da loja ${ICON.out}</span><img class="pic" src="${IMG[st.w1img]}" alt=""></a>
+      <a class="wd sq" href="#" data-demo="Abriria a avaliação no Google"><span class="stars" aria-label="Cinco estrelas">${ICON.star.repeat(5)}</span><strong>Avalie a loja</strong><span class="sub">Leva um minuto, no Google</span></a>
+      <a class="wd sq" href="#" data-demo="Abriria o Instagram da loja"><span class="sq-ic">${ICON.insta}</span><strong>Siga a loja</strong><span class="sub">${st.insta}</span></a>
+      <a class="wd wide brand" href="#" data-demo="Abriria a agenda da loja"><span class="k">AGENDA</span><strong class="ttl">${st.w4}</strong><span class="bottom">Escolher dia e horário ${ICON.out}</span>${pic4}</a>
+    </div><div class="dots" aria-hidden="true" data-dots><span class="on"></span><span></span><span></span><span></span></div></section>`;
+  }
+  if (n === 1) {
+    const team = st.team ? `<a class="row" href="#loja/${s.store}">${ICON.team}<span class="tx"><strong>Conhecer a equipe</strong><small>Outros consultores da loja</small></span>${ICON.chev}</a>` : '';
+    return `<section aria-label="Loja"><div class="list">
+      <a class="row" href="#" data-demo="Abriria o WhatsApp da loja">${ICON.chat}<span class="tx"><strong>WhatsApp da loja</strong><small>Atendimento da equipe</small></span>${ICON.chev}</a>
+      <a class="row" href="#" data-demo="Abriria a ligação para ${st.phone}">${ICON.phone}<span class="tx"><strong>Ligar para a loja</strong><small>${st.phone}</small></span>${ICON.chev}</a>
+      ${team}
+      <div class="row">${ICON.clock}<span class="tx"><strong>Horário</strong><small>[Horário de funcionamento]</small></span></div>
+    </div></section>`;
+  }
+  return `<section aria-label="Como chegar"><div class="map-card">
+    <svg viewBox="0 0 350 150" aria-hidden="true"><rect width="350" height="150" fill="#0E0E11"/><path d="M0 30H350M0 75H350M0 120H350M60 0V150M150 0V150M240 0V150M320 0V150" stroke="#1C1C21" stroke-width="10"/><path d="M-10 140L360 20" stroke="#26262D" stroke-width="18"/><path d="M40 140C80 120 120 118 150 96S220 72 238 60" stroke="var(--accent-text)" stroke-width="3" stroke-dasharray="6 7" fill="none" stroke-linecap="round"/><circle cx="40" cy="140" r="6" fill="#E9EAEA"/><path d="M238 60s16-14 16-27a16 16 0 0 0-32 0c0 13 16 27 16 27z" fill="var(--accent)"/><circle cx="238" cy="33" r="6" fill="#050506"/></svg>
+    <div class="in"><p class="k">ENDEREÇO</p><p class="addr">${st.address}</p>
+      <div class="route-btns"><a href="#" data-demo="Abriria o Waze até a loja">${ICON.waze}Waze</a><a href="#" data-demo="Abriria o Google Maps até a loja">${ICON.pin}Google Maps</a></div>
+    </div></div></section>`;
+}
+
+function wirePanel(panel) {
+  panel.querySelectorAll('[data-demo]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); toast(a.dataset.demo); }));
+  const strip = panel.querySelector('[data-strip]');
+  if (strip) {
+    const dots = panel.querySelectorAll('[data-dots] span');
+    strip.addEventListener('scroll', () => {
+      const max = strip.scrollWidth - strip.clientWidth;
+      const idx = max > 0 ? Math.round((strip.scrollLeft / max) * (dots.length - 1)) : 0;
+      dots.forEach((d, k) => d.classList.toggle('on', k === idx));
+    }, { passive: true });
+  }
+}
+
+/* ---------- Página da loja ---------- */
+function renderStore(key) {
+  const st = STORES[key] && STORES[key].team ? STORES[key] : STORES.demo;
+  applyTheme(st.theme);
+  const team = st.team.map((k) => ({ id: k, ...SELLERS[k] }));
+  phone.innerHTML = `
+  <section class="screen grid-bg enter" aria-label="${st.name}">
+    <div class="glow-amber"></div>
+    <header class="topbar">${storeLogo(st)}<button type="button" class="icon-btn" aria-label="Compartilhar página da loja" data-share>${ICON.share}</button></header>
+    <div class="store-head"><p class="kicker">Loja · ${st.area}</p><h1 class="h">${st.name}</h1><p class="addr">${st.address}</p></div>
+    <section aria-label="Escolha seu consultor" style="padding-top:26px">
+      <h2 class="sec-title">Escolha quem vai atender você</h2>
+      <div class="carousel" data-car>
+        <div class="glow"></div>
+        ${team.map((p, k) => `<button type="button" class="sc" data-sc="${k}" aria-label="${p.name}, ${p.role}"><img src="${IMG[p.photo]}" alt=""><span class="n">${p.name}</span><span class="r">${p.role}</span></button>`).join('')}
+      </div>
+      <div class="car-ctrl">
+        <button type="button" class="icon-btn" data-prev aria-label="Consultor anterior">${ICON.back}</button>
+        <div class="dots" aria-hidden="true" style="padding:0" data-cdots>${team.map(() => '<span></span>').join('')}</div>
+        <button type="button" class="icon-btn" data-next aria-label="Próximo consultor">${ICON.next}</button>
+      </div>
+      <a class="open-card" href="#" data-opencard></a>
+    </section>
+    <section aria-label="A loja" style="padding-top:30px">
+      <h2 class="sec-title">A loja</h2>
+      <div class="strip">
+        <a class="wd wide" href="#" data-demo="Abriria o Waze ou Google Maps" style="padding:0">
+          <svg class="map-bg" viewBox="0 0 296 176" aria-hidden="true"><rect width="296" height="176" fill="#0E0E11"/><path d="M0 36H296M0 88H296M0 140H296M50 0V176M130 0V176M210 0V176M280 0V176" stroke="#1C1C21" stroke-width="9"/><path d="M-10 156L310 30" stroke="#26262D" stroke-width="16"/><path d="M222 70s14-12 14-24a14 14 0 0 0-28 0c0 12 14 24 14 24z" fill="var(--accent)"/><circle cx="222" cy="46" r="5" fill="#050506"/></svg>
+          <span class="map-label"><strong>Como chegar</strong><small>Waze ou Google Maps</small></span>
+        </a>
+        <a class="wd sq" href="#" data-demo="Abriria o WhatsApp da loja"><span class="sq-ic acc">${ICON.chat}</span><strong>Falar com a loja</strong><span class="sub">WhatsApp da equipe</span></a>
+        <a class="wd sq" href="#" data-demo="Abriria a avaliação no Google"><span class="stars" aria-label="Cinco estrelas">${ICON.star.repeat(5)}</span><strong>Avalie a loja</strong><span class="sub">No Google</span></a>
+        <a class="wd wide brand" href="#" data-demo="Abriria o site da loja"><span class="k">ESTOQUE</span><strong class="ttl">${st.w1}</strong><span class="bottom">Site da loja ${ICON.out}</span><img class="pic" src="${IMG[st.w1img]}" alt=""></a>
+      </div>
+    </section>
+    <footer class="foot" style="padding-bottom:40px">${sig()}<button type="button" data-prefs>Preferências de privacidade</button></footer>
+  </section>`;
+
+  const scr = phone.querySelector('.screen');
+  const cards = scr.querySelectorAll('[data-sc]');
+  const dots = scr.querySelectorAll('[data-cdots] span');
+  const prev = scr.querySelector('[data-prev]'); const next = scr.querySelector('[data-next]');
+  const open = scr.querySelector('[data-opencard]');
+  let sel = 0;
+  const layout = () => {
+    cards.forEach((c, k) => {
+      const d = k - sel; const a = Math.abs(d);
+      let t; let o; let z;
+      if (a === 0) { t = 'translateX(0) rotateY(0deg) scale(1)'; o = 1; z = 10; }
+      else if (a === 1) { t = `translateX(${d * 150}px) rotateY(${-d * 32}deg) scale(0.82)`; o = 0.55; z = 5; }
+      else if (a === 2) { t = `translateX(${d * 236}px) rotateY(${-d * 46}deg) scale(0.68)`; o = 0.2; z = 2; }
+      else { t = `translateX(${d * 300}px) rotateY(${-d * 50}deg) scale(0.6)`; o = 0; z = 1; }
+      c.style.transform = t; c.style.opacity = o; c.style.zIndex = z;
+      c.style.boxShadow = a === 0 ? '0 0 0 2px var(--accent-text), 0 30px 60px -24px rgba(0,0,0,0.9)' : '0 0 0 1px rgba(233,234,234,0.08)';
+      c.tabIndex = a === 0 ? 0 : -1;
+    });
+    dots.forEach((d, k) => d.classList.toggle('on', k === sel));
+    prev.disabled = sel === 0; next.disabled = sel === team.length - 1;
+    open.innerHTML = `Abrir o cartão de ${team[sel].name} ${ICON.arrow}`;
+    open.href = `#c/${team[sel].id}`;
+  };
+  const go = (n) => { sel = Math.max(0, Math.min(team.length - 1, n)); layout(); };
+  cards.forEach((c, k) => c.addEventListener('click', () => (k === sel ? (location.hash = `#c/${team[k].id}`) : go(k))));
+  prev.addEventListener('click', () => go(sel - 1));
+  next.addEventListener('click', () => go(sel + 1));
+  const car = scr.querySelector('[data-car]');
+  let sx = null;
+  car.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+  car.addEventListener('pointerup', (e) => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (dx > 40) go(sel - 1); else if (dx < -40) go(sel + 1); });
+  scr.querySelectorAll('[data-demo]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); toast(a.dataset.demo); }));
+  scr.querySelector('[data-share]').addEventListener('click', () => toast('Abriria o menu de compartilhar do celular'));
+  layout();
+}
+
+/* ---------- Rotas ---------- */
+function route() {
+  clearTimers();
+  const h = location.hash.replace(/^#/, '') || 'nfc/marcus';
+  const [kind, id] = h.split('/');
+  if (kind === 'c') renderCard(id);
+  else if (kind === 'loja') renderStore(id);
+  else renderEnvelope(id);
+  document.querySelectorAll('#side-nav a').forEach((a) => a.setAttribute('aria-current', a.getAttribute('href') === '#' + h ? 'page' : 'false'));
+}
+window.addEventListener('hashchange', route);
+route();
+
+/* No computador, encolhe o celular para caber em telas mais baixas */
+function fit() {
+  phone.style.zoom = window.innerWidth > 760 ? Math.min(1, (window.innerHeight - 48) / 866) : 1;
+}
+window.addEventListener('resize', fit);
+fit();
+</script>
+</body>
+</html>
